@@ -17,15 +17,21 @@ type productoDataProps = {
 
 export const getAllProductosService = async (userRol: string | undefined): Promise<productoDataProps[]> => {
 	try {
-		const queryAdmin = 'SELECT * FROM Productos ORDER BY idproducto;';
-		const queryOtros = 'SELECT * FROM Productos WHERE stock > 0 AND estados_idestado = 1 ORDER BY idproducto;';
+		const queryAdmin = 'SELECT idproducto as id, * FROM Productos ORDER BY idproducto;';
+		const queryOtros = 'SELECT idproducto as id, * FROM Productos WHERE estados_idestado = 1 ORDER BY idproducto;';
 		//Hacer la consulta a la base de datos y traer todos los registros
-		const productos = (await db.query(userRol === 'Administrador' ? queryAdmin : queryOtros, {
+		const productos = (await db.query(userRol !== 'Cliente' ? queryAdmin : queryOtros, {
 			type: QueryTypes.SELECT,
 		})) as productoDataProps[];
 
+		// Construir la URL completa de la imagen para cada producto
+		const productosConUrl = productos.map((producto) => ({
+			...producto,
+			foto: `http://${process.env.HOST_SERVER || 'localhost'}:${process.env.PORT || 4000}${producto.foto}`, // Aquí se crea la URL completa de la imagen
+		}));
+
 		//Se retornan los datos encontrados
-		return productos;
+		return productosConUrl;
 	} catch (error) {
 		// Captura y envio de errores
 		console.error('Error en el servidor: ', error);
@@ -158,6 +164,9 @@ export const updateProductoService = async (id: number, productoData: productoDa
 			throw new Error('codigo existe');
 		}
 
+		// Si no se envió una nueva foto, usar la foto existente
+		const fotoFinal = productoData.foto || existeId[0].foto;
+
 		// Llamada al procedimiento almacenado
 		const producto = (await db.query(
 			'EXEC sp_actualizar_producto @idproducto = :id, @idcategoria = :idcategoria, @idusuario = :idusuario, @idestado = :idestado, @nombre = :nombre, @marca = :marca, @codigo = :codigo, @stock = :stock, @precio = :precio, @foto = :foto;',
@@ -172,7 +181,7 @@ export const updateProductoService = async (id: number, productoData: productoDa
 					codigo: productoData.codigo,
 					stock: productoData.stock,
 					precio: productoData.precio,
-					foto: productoData.foto,
+					foto: fotoFinal,
 				},
 				type: QueryTypes.UPDATE,
 			}

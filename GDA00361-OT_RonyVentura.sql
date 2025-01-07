@@ -26,7 +26,7 @@ constraint FK_roles_estados foreign key (estados_idestado) references Estados(id
 
 create table Personas(
 idpersona int identity,
-estados_idestado int not null,
+estados_idestado int default 1 not null,
 cui bigint unique not null,
 nombre varchar(30) not null,
 apellido varchar(30) not null,
@@ -42,12 +42,12 @@ constraint FK_personas_estados foreign key (estados_idestado) references Estados
 create table Clientes(
 idcliente int identity,
 personas_idpersona int not null,
-estados_idestado int not null,
-tipo_cliente varchar(20) not null,
+estados_idestado  int default 1 not null,
+tipo_cliente varchar(20) default 'Persona' not null,
 nit varchar(10) unique not null,
 razon_social varchar(255),
 nombre_comercial varchar(50),
-direccion_entrega varchar(100) not null,
+direccion_entrega varchar(200),
 fecha_creacion datetime default getdate(),
 constraint PK_clientes primary key (idcliente),
 constraint FK_clientes_personas foreign key (personas_idpersona) references Personas(idpersona),
@@ -57,7 +57,7 @@ constraint FK_clientes_estados foreign key (estados_idestado) references Estados
 create table Usuarios(
 idusuario int identity,
 roles_idrol int not null,
-estados_idestado int not null,
+estados_idestado int default 1 not null,
 personas_idpersona int not null,
 contrasena varchar(255) not null,
 fecha_creacion datetime default getdate(),
@@ -105,7 +105,7 @@ nombre varchar(30) not null,
 create table Ordenes(
 idorden int identity,
 usuarios_idusuario int not null,
-estados_idestado int not null,
+estados_idestado int default 3 not null,
 clientes_idcliente int not null,
 fecha_envio date,
 fecha_entregada date,
@@ -134,6 +134,12 @@ constraint FK_detallesordenes_productos foreign key (productos_idproducto) refer
 );
 
 
+UPDATE DetallesOrdenes
+SET subtotal = 0
+WHERE subtotal IS NULL;
+ALTER TABLE DetallesOrdenes
+ALTER COLUMN subtotal decimal(5,2) not null;
+
 
 /******************** INSERCION DE DATOS PARA EJEMPLO Y PRUEBAS ********************/
 
@@ -143,6 +149,7 @@ INSERT INTO Estados (nombre) VALUES
 ('Inactivo'),
 ('Pendiente'),
 ('Autorizado'),
+('Cancelado'),
 ('Entregado');
 
 -- Insertar datos en la tabla Roles
@@ -153,9 +160,9 @@ INSERT INTO Roles (estados_idestado, nombre, descripcion) VALUES
 
 -- Insertar datos en la tabla Personas
 INSERT INTO Personas (estados_idestado, cui, nombre, apellido, fecha_nacimiento, correo_electronico, telefono, direccion) VALUES
-(1, 1234567890123, 'Juan', 'Perez', '1990-05-15', 'usuario1@correo.com', 55512345, 'Calle Principal 123'),
-(1, 2345678901234, 'Maria', 'Lopez', '1985-03-22', 'maria.lopez@gmail.com', 55567890, 'Avenida Secundaria 456'),
-(1, 3456789012345, 'Carlos', 'Garcia', '2000-07-30', 'carlos.garcia@gmail.com', 55511223, 'Boulevard Central 789'),
+(1, 1234567890123, 'Juan', 'Perez', '1990-05-15', 'administrador@correo.com', 55512345, 'Calle Principal 123'),
+(1, 2345678901234, 'Maria', 'Lopez', '1985-03-22', 'operador@correo.com', 55567890, 'Avenida Secundaria 456'),
+(1, 3456789012345, 'Carlos', 'Garcia', '2000-07-30', 'cliente@correo.com', 55511223, 'Boulevard Central 789'),
 (1, 4567890123456, 'Ana', 'Martinez', '1995-06-10', 'ana.martinez@gmail.com', 55533445, 'Calle Ficticia 101'),
 (1, 5678901234567, 'Pedro', 'Ramirez', '1988-11-20', 'pedro.ramirez@gmail.com', 55599887, 'Avenida Imaginaria 202'),
 (1, 6789012345678, 'Lucia', 'Fernandez', '1993-08-15', 'lucia.fernandez@gmail.com', 55566778, 'Boulevard Inventado 303'),
@@ -1304,6 +1311,16 @@ begin
         set total_orden = @total_orden_calculado
         where idorden = @idorden;
 
+		        -- Actualizar el stock de los productos
+        UPDATE Productos
+        SET stock = stock - Detalle.cantidad
+        FROM Productos p
+        INNER JOIN OPENJSON(@detalles)
+        WITH (
+            productos_idproducto INT,
+            cantidad INT
+        ) AS Detalle ON p.idproducto = Detalle.productos_idproducto;
+
 		-- Confirmar la transacción
         commit transaction;
 
@@ -1455,6 +1472,18 @@ begin
 		estados_idestado = @idestado
 	where idorden = @idorden;
 
+	        -- Si el estado es "cancelado" (suponiendo que 6 representa el estado cancelado)
+     if @idestado = 5
+		begin
+        -- Restaurar el stock de los productos
+     update Productos
+     set stock = stock + Detalle.cantidad
+     from Productos p
+     inner join DetallesOrdenes Detalle
+     on p.idproducto = Detalle.productos_idproducto
+     where Detalle.ordenes_idorden = @idorden;
+     end;
+
 	-- confirmar la transaccion
 	commit transaction;
 	print 'Actualizado correctamente';
@@ -1465,6 +1494,48 @@ begin
 		where idorden = @idorden
 
 end;
+
+
+GO
+
+GO
+
+CREATE PROCEDURE sp_insertar_usuario_persona_cliente
+    @cui BIGINT,
+    @nombre VARCHAR(30),
+    @apellido VARCHAR(30),
+    @fecha_nacimiento DATE,
+    @correo_electronico VARCHAR(50),
+    @telefono NUMERIC(8,0),
+    @direccion VARCHAR(100),
+    @nit VARCHAR(10),
+    @roles_idrol INT,
+    @contrasena VARCHAR(255)
+AS
+BEGIN
+    DECLARE @idpersona INT, @idcliente INT, @idusuario INT;
+    
+    -- 1. Insertar en la tabla Personas
+    INSERT INTO Personas (cui, nombre, apellido, fecha_nacimiento, correo_electronico, telefono, direccion)
+    VALUES ( @cui, @nombre, @apellido, @fecha_nacimiento, @correo_electronico, @telefono, @direccion);
+    
+    -- Obtener el idpersona generado automáticamente
+    SET @idpersona = SCOPE_IDENTITY();
+
+    -- 2. Insertar en la tabla Clientes con el idpersona recién creado
+    INSERT INTO Clientes (personas_idpersona,  nit)
+    VALUES (@idpersona,  @nit);
+    
+    -- 3. Insertar en la tabla Usuarios con el idpersona recién creado
+    INSERT INTO Usuarios (roles_idrol, personas_idpersona, contrasena)
+    VALUES (@roles_idrol, @idpersona, @contrasena);
+    
+    -- Obtener el idusuario generado automáticamente
+    SET @idusuario = SCOPE_IDENTITY();
+
+    -- Retornar los ids generados
+    SELECT * FROM Usuarios where idusuario = @idusuario
+END;
 
 
 GO
@@ -1807,3 +1878,8 @@ exec sp_actualizar_estado_orden
 
 
 */
+
+
+
+ALTER TABLE Clientes
+ALTER COLUMN direccion_entrega VARCHAR(200) NULL;

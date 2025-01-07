@@ -12,8 +12,10 @@ import { badRequestResponse, createdResponse, internalServerErrorResponse, okRes
 
 export const getAllCategoriasProductos = async (req: Request, res: Response): Promise<void> => {
 	try {
+		// Obtén el parámetro `useTo` de la query string
+		const useto = req.query.useto as string | undefined;
 		// Se llama al servicio
-		const categoria = await getAllCategoriasProductosService();
+		const categoria = await getAllCategoriasProductosService(useto);
 
 		// Se llama a la funcion para la respuesta http
 		okResponse(res, categoria);

@@ -4,7 +4,7 @@ import { loginService } from '../services/LoginServices';
 
 /************************* CONTROLADOR LOGIN *************************/
 
-export const loginController = async (req: Request, res: Response): Promise<void> => {
+export const loginController = async (req: Request, res: Response): Promise<any> => {
 	try {
 		// Se obtiene informacion desde body
 		const { correo_electronico, contrasena } = req.body;
@@ -14,15 +14,17 @@ export const loginController = async (req: Request, res: Response): Promise<void
 
 		// Se llama funcion de respuesta http
 		okResponse(res, {
-			usuario: { correo_electronico: usuario.correo_electronico, rol: usuario.rol },
+			usuario: { correo_electronico: usuario.correo_electronico, rol: usuario.rol, idusuario: usuario.idusuario, personas_idpersona: usuario.personas_idpersona },
 			token: usuario.token,
 		});
 	} catch (error) {
 		// Manejo de errores especificos
 		if (error instanceof Error && error.message === 'correo no existe') {
-			badRequestResponse(res, 'El correo no existe en los registros');
+			return badRequestResponse(res, 'El correo no existe en los registros');
+		} else if (error instanceof Error && error.message === 'contrasena incorrecta') {
+			return badRequestResponse(res, 'Contraseña incorrecta');
 		} else {
-			internalServerErrorResponse(res, error instanceof Error ? error.message : 'Error inesperado');
+			return internalServerErrorResponse(res, error instanceof Error ? error.message : 'Error inesperado');
 		}
 	}
 };

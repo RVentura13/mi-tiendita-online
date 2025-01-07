@@ -40,21 +40,27 @@ export const getUsuario = async (req: Request, res: Response): Promise<void> => 
 
 export const createUsuario = async (req: Request, res: Response): Promise<void> => {
 	try {
-		// Se obtiene informacion desde body
-		const { roles_idrol, estados_idestado, personas_idpersona, contrasena } = req.body;
+		// Se obtiene la información desde el body de la solicitud
+		const { roles_idrol, contrasena, cui, nombre, apellido, fecha_nacimiento, correo_electronico, telefono, direccion, nit } = req.body;
 
-		// Se llama al servicio
+		// Se llama al servicio para crear el usuario
 		const usuario = await createUsuarioService({
 			roles_idrol,
-			estados_idestado,
-			personas_idpersona,
 			contrasena,
+			cui,
+			nombre,
+			apellido,
+			fecha_nacimiento,
+			correo_electronico,
+			telefono,
+			direccion,
+			nit,
 		});
 
-		// Se llama funcion de respuesta http
+		// Se llama la función de respuesta http para indicar que el recurso fue creado
 		createdResponse(res, usuario);
 	} catch (error) {
-		// Manejo de errores especificos
+		// Manejo de errores específicos
 		if (error instanceof Error && error.message === 'id no existe') {
 			badRequestResponse(res, 'El id proporcionado no existe');
 		} else if (error instanceof Error && error.message === 'persona no existe') {
@@ -62,6 +68,7 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
 		} else if (error instanceof Error && error.message === 'persona existe') {
 			badRequestResponse(res, 'La persona ya tiene un usuario');
 		} else {
+			// Si ocurre un error inesperado, se responde con un error del servidor
 			internalServerErrorResponse(res, error instanceof Error ? error.message : 'Error inesperado');
 		}
 	}

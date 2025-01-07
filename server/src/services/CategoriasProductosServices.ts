@@ -9,17 +9,21 @@ type categoriaProductoDataProps = {
 
 /************************* OBTENER TODOS *************************/
 
-export const getAllCategoriasProductosService = async (): Promise<categoriaProductoDataProps[]> => {
+export const getAllCategoriasProductosService = async (useTo: string | undefined): Promise<categoriaProductoDataProps[]> => {
 	try {
-		//Hacer la consulta a la base de datos y traer todos los registros
-		const categorias = (await db.query('SELECT * FROM CategoriasProductos ORDER BY idcategoria;', {
+		const queryAll = 'SELECT idcategoria as id, * FROM CategoriasProductos ORDER BY idcategoria;';
+		const querySelect = 'SELECT idcategoria as id, * FROM CategoriasProductos WHERE estados_idestado = 1 ORDER BY idcategoria;';
+
+		// Decide la query según el valor de useTo
+		const query = useTo === 'select' ? querySelect : queryAll;
+
+		// Hacer la consulta a la base de datos
+		const categorias = (await db.query(query, {
 			type: QueryTypes.SELECT,
 		})) as categoriaProductoDataProps[];
 
-		//Se retornan los datos encontrados
 		return categorias;
 	} catch (error) {
-		// Captura y envio de errores
 		console.error('Error en el servidor: ', error);
 		throw new Error('Error en el servidor: ' + error);
 	}

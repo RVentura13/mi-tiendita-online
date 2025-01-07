@@ -34,10 +34,13 @@ export const getAllClientesService = async (): Promise<clienteDataProps[]> => {
 export const getClienteService = async (id: number): Promise<clienteDataProps> => {
 	try {
 		//Hacer la consulta a la base de datos para verificar id
-		const cliente = (await db.query('SELECT * FROM Clientes WHERE idcliente = :id;', {
-			replacements: { id },
-			type: QueryTypes.SELECT,
-		})) as clienteDataProps[];
+		const cliente = (await db.query(
+			'SELECT c.idcliente, p.nombre, p.apellido, p.correo_electronico, c.nit, p.telefono, c.direccion_entrega FROM Clientes c INNER JOIN Personas p ON c.personas_idpersona = p.idpersona WHERE personas_idpersona = :id;',
+			{
+				replacements: { id },
+				type: QueryTypes.SELECT,
+			}
+		)) as clienteDataProps[];
 
 		//Si id no existe retorna un error
 		if (cliente.length === 0) {

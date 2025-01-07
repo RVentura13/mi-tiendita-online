@@ -1,5 +1,4 @@
 import { QueryTypes } from 'sequelize';
-import bcrypt from 'bcrypt';
 import db from '../config/database';
 import { encryptPassword } from '../helpers/handleBcrypt';
 
@@ -10,13 +9,28 @@ type usuarioDataProps = {
 	contrasena: string;
 };
 
+type UsuarioDataPropsCreate = {
+	roles_idrol: number;
+	contrasena: string;
+	cui: number;
+	nombre: string;
+	apellido: string;
+	fecha_nacimiento: Date;
+	correo_electronico: string;
+	telefono: number;
+	direccion: string;
+	nit: string;
+};
+
 /************************* OBTENER TODOS *************************/
 
 export const getAllUsuariosService = async (): Promise<usuarioDataProps[]> => {
 	try {
 		//Hacer la consulta a la base de datos y traer todos los registros
 		const usuarios = (await db.query(
-			'select u.idusuario as id, r.nombre as Rol, e.nombre as Estado, p.nombre as Persona from Usuarios u inner join Roles r on u.roles_idrol = r.idrol inner join Estados e on u.estados_idestado = e.idestado inner join Personas p on u.personas_idpersona = p.idpersona ORDER BY idusuario;',
+			`select u.idusuario as id, r.nombre as nombre_rol, p.nombre as nombre_persona, p.apellido as apellido_persona, p.correo_electronico, u.estados_idestado from Usuarios u
+				inner join Personas p on u.personas_idpersona = p.idpersona
+				inner join Roles r on u.roles_idrol = r.idrol;`,
 			{
 				type: QueryTypes.SELECT,
 			}
@@ -60,45 +74,42 @@ export const getUsuarioService = async (id: number): Promise<usuarioDataProps> =
 
 /************************* CREAR *************************/
 
-export const createUsuarioService = async (usuarioData: usuarioDataProps): Promise<usuarioDataProps> => {
+export const createUsuarioService = async (usuarioData: UsuarioDataPropsCreate): Promise<UsuarioDataPropsCreate> => {
 	try {
-		//Hacer la consulta a la base de datos para verificar si existe la persona
-		const existePersona = (await db.query('SELECT * FROM Personas WHERE idpersona = :idpersona;', {
-			replacements: { idpersona: usuarioData.personas_idpersona },
-			type: QueryTypes.SELECT,
-		})) as usuarioDataProps[];
-
-		//Si persona no existe retorna un error
-		if (existePersona.length === 0) {
-			throw new Error('persona no existe');
-		}
-
-		//Hacer la consulta a la base de datos para verificar si existe la persona en usuarios para evitar mas de un usuario
-		const existePersonaenUsuarios = (await db.query('SELECT * FROM Usuarios WHERE personas_idpersona = :idpersona;', {
-			replacements: { idpersona: usuarioData.personas_idpersona },
-			type: QueryTypes.SELECT,
-		})) as usuarioDataProps[];
-
-		//Si persona no existe retorna un error
-		if (existePersonaenUsuarios.length > 0) {
-			throw new Error('persona existe');
-		}
-
-		//Encriptar la contraseña
+		// Encriptar la contraseña
 		const hashedPassword = await encryptPassword(usuarioData.contrasena);
 
 		// Llamada al procedimiento almacenado
-		const usuario = (await db.query('EXEC sp_insertar_usuario @idrol = :idrol, @idestado = :idestado, @idpersona = :idpersona, @contrasena = :contrasena;', {
-			replacements: {
-				idrol: usuarioData.roles_idrol,
-				idestado: usuarioData.estados_idestado,
-				idpersona: usuarioData.personas_idpersona,
-				contrasena: hashedPassword,
-			},
-			type: QueryTypes.INSERT,
-		})) as usuarioDataProps[];
+		const usuario = (await db.query(
+			`EXEC sp_insertar_usuario_persona_cliente
+				@cui = :cui,
+				@nombre = :nombre,
+				@apellido = :apellido,
+				@fecha_nacimiento = :fecha_nacimiento,
+				@correo_electronico = :correo_electronico,
+				@telefono = :telefono,
+				@direccion = :direccion,
+				@nit = :nit,
+				@roles_idrol = :roles_idrol,
+				@contrasena = :contrasena;`,
+			{
+				replacements: {
+					cui: usuarioData.cui,
+					nombre: usuarioData.nombre,
+					apellido: usuarioData.apellido,
+					fecha_nacimiento: usuarioData.fecha_nacimiento,
+					correo_electronico: usuarioData.correo_electronico,
+					telefono: usuarioData.telefono,
+					direccion: usuarioData.direccion,
+					nit: usuarioData.nit,
+					roles_idrol: usuarioData.roles_idrol,
+					contrasena: hashedPassword,
+				},
+				type: QueryTypes.SELECT,
+			}
+		)) as UsuarioDataPropsCreate[];
 
-		// Retorna datos ingresados
+		// Retorna los datos ingresados
 		return usuario[0];
 	} catch (error) {
 		// Captura y envio de errores

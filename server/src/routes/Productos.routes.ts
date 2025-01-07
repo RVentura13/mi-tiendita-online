@@ -133,7 +133,7 @@ productoRoutes.put(
 			.withMessage('El precio debe ser un valor positivo'),
 	],
 	validateRequest,
-	validateFileUpload,
+	// validateFileUpload,
 	checkRoleUsuario(rolesPermitidos.productos.put),
 	updateProducto
 );

@@ -6,8 +6,10 @@ import { createOrdenDetallesService, getAllOrdenesDetallesService, getOrdenDetal
 
 export const getAllOrdenesDetalles = async (req: Request, res: Response): Promise<void> => {
 	try {
+		// Obtén el parámetro `idusuario` de la query string
+		const idusuario = parseInt(req.query.idusuario as string) || 0;
 		// Se llama al servicio
-		const ordenDetalles = await getAllOrdenesDetallesService();
+		const ordenDetalles = await getAllOrdenesDetallesService(idusuario);
 
 		// Se llama funcion de respuesta http
 		okResponse(res, ordenDetalles);
@@ -41,12 +43,13 @@ export const getOrdenDetalles = async (req: Request, res: Response): Promise<voi
 export const createOrdenDetalles = async (req: Request, res: Response): Promise<void> => {
 	try {
 		// Se obtiene informacion desde body
-		const { usuarios_idusuario, estados_idestado, clientes_idcliente, fecha_envio, fecha_entregada, total_orden, metodo_pago, nota, detalles } = req.body;
+		const { usuarios_idusuario, estados_idestado, nombre_estado, clientes_idcliente, fecha_envio, fecha_entregada, total_orden, metodo_pago, nota, detalles } = req.body;
 
 		// Se llama al servicio
 		const ordenDetalles = await createOrdenDetallesService({
 			usuarios_idusuario,
 			estados_idestado,
+			nombre_estado,
 			clientes_idcliente,
 			fecha_envio,
 			fecha_entregada,
@@ -77,12 +80,13 @@ export const updateOrdenDetalles = async (req: Request, res: Response): Promise<
 		const ordenId = parseInt(id, 10);
 
 		// Se obtiene informacion desde body
-		const { usuarios_idusuario, estados_idestado, clientes_idcliente, fecha_envio, fecha_entregada, total_orden, metodo_pago, nota, detalles } = req.body;
+		const { usuarios_idusuario, estados_idestado, nombre_estado, clientes_idcliente, fecha_envio, fecha_entregada, total_orden, metodo_pago, nota, detalles } = req.body;
 
 		// Se llama al servicio
 		const ordenDetalles = await updateOrdenDetallesService(ordenId, {
 			usuarios_idusuario,
 			estados_idestado,
+			nombre_estado,
 			clientes_idcliente,
 			fecha_envio,
 			fecha_entregada,

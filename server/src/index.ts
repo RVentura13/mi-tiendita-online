@@ -13,12 +13,13 @@ import { personaRoutes } from './routes/Persona.routes';
 import { productoRoutes } from './routes/Productos.routes';
 import { rolRoutes } from './routes/Roles.routes';
 import { usuarioRoutes } from './routes/Usuarios.routes';
+import path from 'path';
 
 // Inicializar variables de entorno
 dotenv.config();
 
 // Asignación de puerto
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT_SERVER || 4000;
 
 const server = express();
 
@@ -37,6 +38,9 @@ connectionDB();
 //Midlesware
 server.use(express.json());
 server.use(cors());
+
+// Servir archivos estáticos desde la carpeta "uploads"
+server.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 //Rutas
 server.use('/api/estados', estadoRoutes);

@@ -5,6 +5,7 @@ import { generateToken } from '../helpers/jwt.util';
 
 type userDataProps = {
 	idusuario: number;
+	personas_idpersona: number;
 	nombre: string;
 	correo_electronico: string;
 	contrasena: string;
@@ -15,6 +16,8 @@ type userDataProps = {
 type LoginServiceResponse = {
 	correo_electronico: string;
 	rol: string;
+	idusuario: number;
+	personas_idpersona: number;
 	token: string;
 };
 
@@ -24,11 +27,11 @@ export const loginService = async (correo_electronico: string, contrasenaTextPla
 	try {
 		// Consulta para verificar si existe usuario, por el correo
 		const usuario = (await db.query(
-			`SELECT p.correo_electronico, r.nombre as rol, u.contrasena, u.idusuario
+			`SELECT p.correo_electronico, r.nombre as rol, u.contrasena, u.idusuario, u.personas_idpersona
 			FROM Usuarios u
 			INNER JOIN Personas p ON u.personas_idpersona = p.idpersona
 			INNER JOIN Roles r ON u.roles_idrol = r.idrol
-			WHERE p.correo_electronico = :correo;`,
+			WHERE p.correo_electronico = :correo AND p.estados_idestado = 1;`,
 			{
 				replacements: {
 					correo: correo_electronico,
